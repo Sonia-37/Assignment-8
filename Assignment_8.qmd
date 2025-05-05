@@ -1,0 +1,122 @@
+---
+title: "Assignment 8"
+author: Zofia Sikorska
+format: html
+embed-resources: true     
+self-contained-math: true
+editor: visual
+---
+
+# Plot I presented
+
+# ![](images/clipboard-4088160589.png){width="544"}
+
+"I tried to do some random plots for the project and at first, I didn’t precisely understand the data I was working with. In my metadata I had information about Shannon entropy and Shannon entropy on function, and I did not understand it’s two separate things (one connected to taxonomy and the other one to functions gut microbial has)\
+What could be improved:
+
+-   better understanding of data and choosing different thing to put in the plot
+
+-   Naming both of the axes
+
+-   Choosing different colours – instead of green there should be colour which is more outstanding than blue (maybe red or orange)
+
+-   Maybe I should also make a lower transparency so the overlapping data will be more visible
+
+-   Changing the name of the plot because the current one says nothing"
+
+# Improved plots
+
+As I mentioned in my previous assignment, I did not understand the data I was working on, so the plots I will present will be ones I made after a deeper understanding of the given data.
+
+(I have data connected to Gut Microbiom)
+
+```{r}
+library(tidyr)
+library(dplyr)
+library(readr)
+library(ggplot2)
+library(plotly)
+```
+
+## 1) Loading data
+
+```{r}
+meta = read.csv("metadata.csv", sep = "\t")
+View(meta)
+```
+
+```{r}
+taxa = read.csv("taxa.csv", sep = "\t")
+View(taxa)
+```
+
+## 2) Creating histograms
+
+```{r}
+shan_entr <- ggplot(data = meta, aes(x = Shannon.Entropy))
+shan_entr + 
+  geom_histogram( color = "black", fill = "blue")+ 
+  labs(title = "Histogram Shannon Entropy",
+       x = "Shannon Entropy",
+       y = "Frequency")
+```
+
+```{r}
+shan_entr_func <- ggplot(data = meta, aes(x = Shannon.Entropy.on.Functions))
+shan_entr_func + geom_histogram(color = "black", fill = "blue")+ 
+  labs(title = "Histogram Shannon Entropy on Functions",
+       x = "Shannon Entropy on Functions",
+       y = "Frequency")
+```
+
+```{r}
+gmhi <- ggplot(data = meta, aes(x = GMHI))
+gmhi + geom_histogram(color = "black", fill = "blue")+ 
+  labs(title = "Histogram GMHI",
+       x = "GMHI",
+       y = "Frequency")
+```
+
+The plots show the frequencies of Shannon entropies and the GMHI index. Each plot has a title and labeled axes, and the data distribution is clearly visible. I particularly liked the GMHI histogram because its two peaks may indicate the existence of two subgroups (e.g., healthy and diseased individuals).
+
+## Manipulating taxa data
+
+First I changed my table to longer format.
+
+```{r}
+taxa_long <- taxa %>%
+  pivot_longer(cols = matches("Train"), names_to = "Trains", values_to = "Values")
+head(taxa_long)
+```
+
+Then I joined it with metadata so I know which train has which disease.
+
+WARNING: When joining tables, I sometimes get columns named either category or category.x (reason unknown). If a code block isn't working, try switching to the alternative one.
+
+```{r}
+taxa_long <- taxa_long %>%
+  left_join(y = meta, by = c("Trains" = "sample"))%>%
+  select(sample.id, Trains, Values, category) %>%
+  mutate(Values = na_if(Values, 0))
+head(taxa_long)
+```
+
+I selected one of the diseases to focus on in later analyses. IGT is one of the most common categories in my database, which is why we chose to work with it. I used it as an example because, despite having fewer samples than the healthy group, the relationship is still clearly visible. Unfortunately, processing larger datasets caused my RStudio to crash.
+
+```{r}
+taxa_IGT <-  taxa_long %>%
+  filter(category == "IGT")
+taxa_IGT
+```
+
+This plot shows the density of bacteria in IGT samples. The distinct peak for certain bacterial strains suggests a dominant microbial signature associated with IGT. Using Plotly enhanced interactive visualization, allowing us to identify the most densely represented bacteria. I omitted the legend since the focus was on overall trends rather than individual strain identities. Later in the project, I quantified the most prevalent bacteria, with results presented in tabular format to highlight key differences between healthy and diseased populations.
+
+```{r}
+plot_ly(data = taxa_IGT, y = ~Values, x= ~sample.id, type = 'scatter', color = ~Trains, alpha = 0.7) %>%
+  layout(
+    title = "Density of Bacteria in IGT",
+    xaxis = list(title = "Bacteria"),
+    yaxis = list(title = "Values"),
+    showlegend = FALSE
+  )
+```
